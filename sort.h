@@ -6,7 +6,7 @@ using namespace std;
 
 void countingSortByBit(vector<unsigned char>& arr, int k) {
     int n = arr.size();
-    std::vector<unsigned char> output(n);
+    vector<unsigned char> output(n);
     int count[2] = {0, 0};
     for (int i = 0; i < n; i++) {
         int bit = (arr[i] >> k) & 1;
