@@ -1,9 +1,7 @@
-*   516c337 Merge branch 'feature-io'
+*   8c400a2 Merge pull request #3 from ZigaPesti/feature-io-final
 |\  
-| * 8890df8 Added sort2.h binaryRadixSort
-* | a36f95e Merge pull request #2 from ZigaPesti/feature-io
-|\| 
-| * e2e6576 Added main logic
+| * 9d658a6 Dodano sortiranje
+| * 073629e Implementacija osnovne strukture za binaryRadixSort
 |/  
 *   be60c01 Merge pull request #1 from ZigaPesti/feature-sort
 |\  
