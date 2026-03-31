@@ -1,3 +1,4 @@
+* 4664a19 Dodan  dnevnik revizij
 *   8c400a2 Merge pull request #3 from ZigaPesti/feature-io-final
 |\  
 | * 9d658a6 Dodano sortiranje
