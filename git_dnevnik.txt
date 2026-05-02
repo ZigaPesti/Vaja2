@@ -1,0 +1,13 @@
+*   8c400a2 Merge pull request #3 from ZigaPesti/feature-io-final
+|\  
+| * 9d658a6 Dodano sortiranje
+| * 073629e Implementacija osnovne strukture za binaryRadixSort
+|/  
+*   be60c01 Merge pull request #1 from ZigaPesti/feature-sort
+|\  
+| * f8cc21f Dokončana implementacija sortiranja
+| * d93ed59 Implementiraj binaryRadixSort funkcijo v main datoteko
+| * d331e20 Dodaj countingSortByBit algoritem v sort.h
+|/  
+* 98bcd9c Inicijalizacija projekta in prazna main datoteka
+* 4d532fc first commit

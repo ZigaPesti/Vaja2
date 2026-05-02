@@ -1,0 +1,91 @@
+name: "29912 Testiranje ELF Analiza"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  preveri-teste:
+    name: "1 Preverjanje obstoja testnih skript"
+    runs-on: self-hosted
+    outputs:
+      testi-obstajajo: ${{ steps.korak-preveri.outputs.obstajajo }}
+    steps:
+      - name: Pridobi kodo (checkout)
+        uses: actions/checkout@v4
+      - name: Preveri testne skripte
+        id: korak-preveri
+        run: |
+          > napaka.txt
+          SKRIPTE=(
+            "tests/run_tests.sh"
+            "tests/test_header.sh"
+            "tests/test_simboli.sh"
+            "tests/test_napacna_datoteka.sh"
+          )
+          VSE_OK=true
+          for SKRIPTA in "${SKRIPTE[@]}"; do
+            if ! ls "$SKRIPTA" 2>>napaka.txt; then
+              echo "NAPAKA: '$SKRIPTA' manjka!" >> napaka.txt
+              VSE_OK=false
+            fi
+          done
+          if [ "$VSE_OK" = "true" ]; then
+            chmod +x tests/*.sh 2>>napaka.txt || {
+              echo "NAPAKA: chmod ni uspel." >> napaka.txt
+              VSE_OK=false
+            }
+          fi
+          if [ "$VSE_OK" = "true" ]; then
+            echo "obstajajo=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "obstajajo=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Izpiši napaka.txt
+        run: cat napaka.txt || echo "(prazno)"
+      - name: Naloži artefakt 'napaka'
+        uses: actions/upload-artifact@v4
+        with:
+          name: napaka
+          path: napaka.txt
+          retention-days: 1
+      - name: Prekini posel ob napaki
+        if: steps.korak-preveri.outputs.obstajajo == 'false'
+        run: exit 1
+
+  pozeni-teste:
+    name: "2 Izvajanje testov (${{ matrix.test-ime }})"
+    runs-on: self-hosted
+    needs: preveri-teste
+    if: needs.preveri-teste.outputs.testi-obstajajo == 'true'
+    strategy:
+      matrix:
+        test-ime:
+          - test_header
+          - test_simboli
+          - test_napacna_datoteka
+      fail-fast: false
+    steps:
+      - name: Pridobi kodo (checkout)
+        uses: actions/checkout@v4
+      - name: Prenesi artefakt 'napaka'
+        uses: actions/download-artifact@v4
+        with:
+          name: napaka
+          path: .
+      - name: Preveri vsebino napaka.txt
+        run: |
+          cat napaka.txt
+          if [ -s napaka.txt ]; then
+            exit 1
+          fi
+      - name: Namesti odvisnosti
+        run: sudo apt-get update -qq && sudo apt-get install -y gcc gcc-multilib make
+      - name: Prevedi projekt
+        run: make clean 2>/dev/null || true && make
+      - name: Nastavi pravice testnih skript
+        run: chmod +x tests/*.sh
+      - name: Izvedi test '${{ matrix.test-ime }}'
+        run: bash "tests/${{ matrix.test-ime }}.sh"
