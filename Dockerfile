@@ -10,7 +10,7 @@ WORKDIR /build
 
 COPY . .
 
-RUN make
+RUN g++ -static -o program main.cpp
 
 FROM debian:bookworm-slim
 
