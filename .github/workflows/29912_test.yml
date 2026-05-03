@@ -1,91 +1,121 @@
-name: "29912 Testiranje ELF Analiza"
+name: "Testiranje Radix Sort"
 
+# Workflow se sproži samodejno ob potisku na vejo main (zahteva iz navodil)
 on:
   push:
     branches:
       - main
 
 jobs:
-
   preveri-teste:
     name: "1 Preverjanje obstoja testnih skript"
-    runs-on: self-hosted
+    runs-on: self-hosted # Uporabimo svojega action-runnerja
     outputs:
+      # Spremenljivko izvozimo, da jo lahko prebere naslednji posel
       testi-obstajajo: ${{ steps.korak-preveri.outputs.obstajajo }}
     steps:
       - name: Pridobi kodo (checkout)
         uses: actions/checkout@v4
+        
       - name: Preveri testne skripte
         id: korak-preveri
         run: |
+          # Standardno napako bomo shranjevali v to datoteko
           > napaka.txt
+          
+          # Seznam testnih skript v tvojem repozitoriju
           SKRIPTE=(
             "tests/run_tests.sh"
             "tests/test_header.sh"
             "tests/test_simboli.sh"
             "tests/test_napacna_datoteka.sh"
           )
+          
           VSE_OK=true
           for SKRIPTA in "${SKRIPTE[@]}"; do
-            if ! ls "$SKRIPTA" 2>>napaka.txt; then
+            # Preverimo obstoj; če ukaza ls ni mogoče izvesti, zapišemo napako v napaka.txt
+            if ! ls "$SKRIPTA" >/dev/null 2>&1; then
               echo "NAPAKA: '$SKRIPTA' manjka!" >> napaka.txt
               VSE_OK=false
             fi
           done
+          
+          # Če skripte obstajajo, dodelimo pravice za izvajanje in lovimo morebitne stderr napake
           if [ "$VSE_OK" = "true" ]; then
             chmod +x tests/*.sh 2>>napaka.txt || {
               echo "NAPAKA: chmod ni uspel." >> napaka.txt
               VSE_OK=false
             }
           fi
+          
+          # Sporočimo naslednjim korakom, ali je bilo vse ok
           if [ "$VSE_OK" = "true" ]; then
             echo "obstajajo=true" >> "$GITHUB_OUTPUT"
           else
             echo "obstajajo=false" >> "$GITHUB_OUTPUT"
           fi
+          
       - name: Izpiši napaka.txt
         run: cat napaka.txt || echo "(prazno)"
+        
       - name: Naloži artefakt 'napaka'
+        # Artefakt naložimo za komunikacijo in prenos datoteke med posli in skriptami
         uses: actions/upload-artifact@v4
         with:
           name: napaka
           path: napaka.txt
           retention-days: 1
+          
       - name: Prekini posel ob napaki
+        # Prekinitev posla, če pride do manjkajočih skript
         if: steps.korak-preveri.outputs.obstajajo == 'false'
         run: exit 1
 
   pozeni-teste:
     name: "2 Izvajanje testov (${{ matrix.test-ime }})"
     runs-on: self-hosted
-    needs: preveri-teste
+    needs: preveri-teste # Drugi posel se izvede le, če je prvi uspešen
+    # Še dodaten varnostni pogoj: izvede se le, če so bile skripte resnično najdene
     if: needs.preveri-teste.outputs.testi-obstajajo == 'true'
     strategy:
       matrix:
+        # Uporaba matrike za paralelizacijo testov (zahteva iz navodil)
         test-ime:
           - test_header
           - test_simboli
           - test_napacna_datoteka
-      fail-fast: false
+      fail-fast: false # Workflow nadaljuje z drugimi testi iz matrike, tudi če eden pade
     steps:
       - name: Pridobi kodo (checkout)
         uses: actions/checkout@v4
+        
       - name: Prenesi artefakt 'napaka'
+        # Naložimo shranjeno napaka.txt iz prejšnjega posla
         uses: actions/download-artifact@v4
         with:
           name: napaka
           path: .
+          
       - name: Preveri vsebino napaka.txt
+        # Če datoteka 'napaka.txt' ni prazna (-s), prekinemo izvajanje
         run: |
           cat napaka.txt
           if [ -s napaka.txt ]; then
+            echo "Artefakt z napako ni prazen. Prekinjam."
             exit 1
           fi
+          
       - name: Namesti odvisnosti
-        run: sudo apt-get update -qq && sudo apt-get install -y gcc gcc-multilib make
+        # Priprava okolja s potrebnimi prevajalniki za C++
+        run: sudo apt-get update -qq && sudo apt-get install -y g++ make
+        
       - name: Prevedi projekt
+        # Uporabimo priložen Makefile
         run: make clean 2>/dev/null || true && make
+        
       - name: Nastavi pravice testnih skript
         run: chmod +x tests/*.sh
+        
       - name: Izvedi test '${{ matrix.test-ime }}'
+        # Zagon posamezne bash skripte iz izbrane matrike
         run: bash "tests/${{ matrix.test-ime }}.sh"
