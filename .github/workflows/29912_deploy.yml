@@ -4,7 +4,7 @@ on:
   workflow_run:
     # Skripta se zažene samodejno po zaključku testnega workflow-a
     workflows:
-      - "29912 Testiranje Radix Sort" # Ime se mora popolnoma ujemati z yml datoteko testov!
+      - "Testiranje Radix Sort" # Ime se mora popolnoma ujemati z yml datoteko testov!
     types:
       - completed
     branches:
